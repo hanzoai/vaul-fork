@@ -12,6 +12,7 @@ interface DrawerContextValue {
   onNestedOpenChange: (o: boolean) => void;
   onNestedRelease: (event: React.PointerEvent<HTMLDivElement>, open: boolean) => void;
   dismissible: boolean;
+  handleOnly: boolean;
   isOpen: boolean;
   isDragging: boolean;
   keyboardIsOpen: React.MutableRefObject<boolean>;
@@ -41,6 +42,7 @@ export const DrawerContext = React.createContext<DrawerContextValue>({
   onNestedRelease: () => {},
   openProp: undefined,
   dismissible: false,
+  handleOnly: false,
   isOpen: false,
   isDragging: false,
   keyboardIsOpen: { current: false },

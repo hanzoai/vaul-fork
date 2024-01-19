@@ -45,6 +45,7 @@ type DialogProps = {
   scrollLockTimeout?: number;
   fixed?: boolean;
   dismissible?: boolean;
+  handleOnly?: boolean;
   onDrag?: (event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) => void;
   onRelease?: (event: React.PointerEvent<HTMLDivElement>, open: boolean) => void;
   modal?: boolean;
@@ -67,6 +68,7 @@ function Root({
   closeThreshold = CLOSE_THRESHOLD,
   scrollLockTimeout = SCROLL_LOCK_TIMEOUT,
   dismissible = true,
+  handleOnly = false,
   fadeFromIndex = snapPoints && snapPoints.length - 1,
   activeSnapPoint: activeSnapPointProp,
   setActiveSnapPoint: setActiveSnapPointProp,
@@ -741,6 +743,7 @@ function Root({
           onRelease,
           onDrag,
           dismissible,
+          handleOnly,
           isOpen,
           isDragging,
           shouldFade,
@@ -761,15 +764,25 @@ function Root({
   );
 }
 
-type HandleProps = React.HTMLAttributes<HTMLSpanElement> & {
+type HandleProps = React.ComponentPropsWithoutRef<'div'> & {
   preventCycle?: boolean;
 };
 
 const LONG_HANDLE_PRESS_TIMEOUT = 400;
 
-const Handle = React.forwardRef<HTMLSpanElement, HandleProps>(({ preventCycle = false, children, ...rest }, ref) => {
-  const { visible, closeDrawer, isDragging, snapPoints, activeSnapPoint, setActiveSnapPoint, dismissible } =
-    useDrawerContext();
+const Handle = React.forwardRef<HTMLDivElement, HandleProps>(({ preventCycle = false, children, ...rest }, ref) => {
+  const {
+    visible,
+    closeDrawer,
+    isDragging,
+    snapPoints,
+    activeSnapPoint,
+    setActiveSnapPoint,
+    dismissible,
+    handleOnly,
+    onPress,
+    onDrag,
+  } = useDrawerContext();
 
   const closeTimeoutIdRef = React.useRef<number | null>(null);
   const shouldCancelInteractionRef = React.useRef(false);
@@ -804,11 +817,16 @@ const Handle = React.forwardRef<HTMLSpanElement, HandleProps>(({ preventCycle = 
   }
 
   return (
-    <span
-      onPointerDown={handleStartInteraction}
-      onPointerCancel={handleCancelInteraction}
+    <div
       onClick={handleCycleSnapPoints}
       onDoubleClick={closeDrawer}
+      onPointerCancel={handleCancelInteraction}
+      onPointerDown={(e) => {
+        handleOnly && onPress(e);
+        handleStartInteraction();
+      }}
+      onPointerMove={(e) => handleOnly && onDrag(e)}
+      // onPointerUp is already handled by the content component
       ref={ref}
       vaul-drawer-visible={visible ? 'true' : 'false'}
       vaul-handle=""
@@ -816,8 +834,10 @@ const Handle = React.forwardRef<HTMLSpanElement, HandleProps>(({ preventCycle = 
       {...rest}
     >
       {/* Expand handle's hit area beyond what's visible to ensure a 44x44 tap target for touch devices (accessibility standard) */}
-      <span vaul-handle-hitarea="" aria-hidden="true" />
-    </span>
+      <span vaul-handle-hitarea="" aria-hidden="true">
+        {children}
+      </span>
+    </div>
   );
 });
 
@@ -867,6 +887,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
     openProp,
     onOpenChange,
     setVisible,
+    handleOnly,
     direction,
   } = useDrawerContext();
   const composedRef = useComposedRefs(ref, drawerRef);
@@ -912,6 +933,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         }
       }}
       onPointerDown={(event) => {
+        if (handleOnly) return;
         rest.onPointerDown?.(event);
         pointerStartRef.current = { x: event.clientX, y: event.clientY };
         onPress(event);
@@ -934,6 +956,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         closeDrawer();
       }}
       onPointerMove={(event) => {
+        if (handleOnly) return;
         rest.onPointerMove?.(event);
         if (!pointerStartRef.current) return null;
         const yPosition = event.clientY - pointerStartRef.current.y;
