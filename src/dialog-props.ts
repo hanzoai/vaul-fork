@@ -12,6 +12,7 @@ type DialogProps = {
   activeSnapPoint?: number | string | null;
   setActiveSnapPoint?: (snapPoint: number | string | null) => void;
   children?: React.ReactNode;
+  defaultOpen?: boolean;
   open?: boolean;
   closeThreshold?: number;
   noBodyStyles?: boolean;
