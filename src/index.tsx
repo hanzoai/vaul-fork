@@ -395,6 +395,7 @@ function Root({
   const closeDrawer = React.useCallback(() => {
     cancelDrag();
     onClose?.();
+    setIsOpen(false);
     setVisible(false);
 
     setTimeout(() => {
