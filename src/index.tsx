@@ -46,6 +46,7 @@ type DialogProps = {
   fixed?: boolean;
   dismissible?: boolean;
   handleOnly?: boolean;
+  fastDragSkipsToEnd?: boolean;
   onDrag?: (event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) => void;
   onRelease?: (event: React.PointerEvent<HTMLDivElement>, open: boolean) => void;
   modal?: boolean;
@@ -69,6 +70,7 @@ function Root({
   scrollLockTimeout = SCROLL_LOCK_TIMEOUT,
   dismissible = true,
   handleOnly = false,
+  fastDragSkipsToEnd=true,
   fadeFromIndex = snapPoints && snapPoints.length - 1,
   activeSnapPoint: activeSnapPointProp,
   setActiveSnapPoint: setActiveSnapPointProp,
@@ -123,6 +125,7 @@ function Root({
     overlayRef,
     onSnapPointChange,
     direction,
+    fastDragSkipsToEnd
   });
 
   usePreventScroll({
