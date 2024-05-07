@@ -1,7 +1,12 @@
 {
-  "name": "vaul",
+  "name": "@hanzo/vaul-fork",
   "version": "0.9.0",
-  "description": "Drawer component for React.",
+  "description": "Hanzo fork of Vaul: a drawer component for React.",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public",
+    "scope": "@hanzo"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -25,7 +30,9 @@
     "dev:website": "turbo run dev --filter=website...",
     "dev:test": "turbo run dev --filter=test...",
     "format": "prettier --write .",
-    "test": "playwright test"
+    "test": "playwright test",
+    "lat": "npm show @hanzo/vaul-fork version",
+    "pub": "npm publish"
   },
   "keywords": [
     "react",
@@ -38,10 +45,7 @@
   "homepage": "https://vaul.emilkowal.ski/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/emilkowalski/vaul.git"
-  },
-  "bugs": {
-    "url": "https://github.com/emilkowalski/vaul/issues"
+    "url": "https://github.com/hanzoai/vaul-fork.git"
   },
   "devDependencies": {
     "@playwright/test": "^1.37.1",
@@ -58,8 +62,8 @@
     "typescript": "5.2.2"
   },
   "peerDependencies": {
-    "react": "^16.8 || ^17.0 || ^18.0",
-    "react-dom": "^16.8 || ^17.0 || ^18.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.4"

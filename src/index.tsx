@@ -1010,6 +1010,9 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         pointerStartRef.current = null;
         onRelease(event);
       }}
+        
+      onFocusOutside={(e) => { if (!modal) { e.preventDefault(); return } }}
+      onEscapeKeyDown={(e) => { if (!modal) { e.preventDefault(); return } }}
     />
   );
 });
