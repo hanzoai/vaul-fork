@@ -85,6 +85,12 @@ export function useSnapPoints({
     [snapPointsOffset, activeSnapPointIndex],
   );
 
+  const snapToIndex = (index: number) => {
+    if (activeSnapPointIndex !== index) {
+      snapToPoint(snapPointsOffset[index] as number);
+    }
+  }
+
   const snapToPoint = React.useCallback(
     (dimension: number) => {
       const newSnapPointIndex = snapPointsOffset?.findIndex((snapPointDim) => snapPointDim === dimension) ?? null;
@@ -257,5 +263,6 @@ export function useSnapPoints({
     onRelease,
     onDrag,
     snapPointsOffset,
+    snapToIndex
   };
 }

@@ -3,59 +3,25 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import React from 'react';
 import { DrawerContext, useDrawerContext } from './context';
-import './style.css';
+// import './style.css'; import in client code for more easy overrides
 import { usePreventScroll, isInput, isIOS } from './use-prevent-scroll';
 import { useComposedRefs } from './use-composed-refs';
 import { usePositionFixed } from './use-position-fixed';
 import { useSnapPoints } from './use-snap-points';
 import { set, reset, getTranslate, dampenValue, isVertical } from './helpers';
-import { TRANSITIONS, VELOCITY_THRESHOLD } from './constants';
 import { DrawerDirection } from './types';
+import type DialogProps from './dialog-props';
 
-const CLOSE_THRESHOLD = 0.25;
-
-const SCROLL_LOCK_TIMEOUT = 100;
-
-const BORDER_RADIUS = 8;
-
-const NESTED_DISPLACEMENT = 16;
-
-const WINDOW_TOP_OFFSET = 26;
-
-const DRAG_CLASS = 'vaul-dragging';
-
-interface WithFadeFromProps {
-  snapPoints: (number | string)[];
-  fadeFromIndex: number;
-}
-
-interface WithoutFadeFromProps {
-  snapPoints?: (number | string)[];
-  fadeFromIndex?: never;
-}
-
-type DialogProps = {
-  activeSnapPoint?: number | string | null;
-  setActiveSnapPoint?: (snapPoint: number | string | null) => void;
-  children?: React.ReactNode;
-  open?: boolean;
-  closeThreshold?: number;
-  onOpenChange?: (open: boolean) => void;
-  shouldScaleBackground?: boolean;
-  scrollLockTimeout?: number;
-  fixed?: boolean;
-  dismissible?: boolean;
-  handleOnly?: boolean;
-  fastDragSkipsToEnd?: boolean;
-  onDrag?: (event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) => void;
-  onRelease?: (event: React.PointerEvent<HTMLDivElement>, open: boolean) => void;
-  modal?: boolean;
-  nested?: boolean;
-  onClose?: () => void;
-  direction?: 'top' | 'bottom' | 'left' | 'right';
-  preventScrollRestoration?: boolean;
-  disablePreventScroll?: boolean;
-} & (WithFadeFromProps | WithoutFadeFromProps);
+import {
+  TRANSITIONS, 
+  VELOCITY_THRESHOLD,
+  CLOSE_THRESHOLD,
+  SCROLL_LOCK_TIMEOUT,
+  BORDER_RADIUS,
+  NESTED_DISPLACEMENT,
+  WINDOW_TOP_OFFSET,
+  DRAG_CLASS,
+} from './constants'
 
 function Root({
   open: openProp,
@@ -76,11 +42,14 @@ function Root({
   setActiveSnapPoint: setActiveSnapPointProp,
   fixed,
   modal = true,
+  handleCloseGesture, 
+  setActiveSPIndexSetter,
   onClose,
   direction = 'bottom',
   preventScrollRestoration = true,
   disablePreventScroll = false,
 }: DialogProps) {
+
   const [isOpen = false, setIsOpen] = React.useState<boolean>(false);
   const [hasBeenOpened, setHasBeenOpened] = React.useState<boolean>(false);
   // Not visible = translateY(100%)
@@ -116,6 +85,7 @@ function Root({
     onDrag: onDragSnapPoints,
     shouldFade,
     getPercentageDragged: getSnapPointsPercentageDragged,
+    snapToIndex
   } = useSnapPoints({
     snapPoints,
     activeSnapPointProp,
@@ -341,6 +311,13 @@ function Root({
       }
     }
   }
+
+  React.useEffect(() => {
+    if (setActiveSPIndexSetter) {
+      setActiveSPIndexSetter(snapToIndex)
+    }
+  }, [setActiveSPIndexSetter, snapToIndex]);
+
 
   React.useEffect(() => {
     return () => {
@@ -747,6 +724,7 @@ function Root({
           onDrag,
           dismissible,
           handleOnly,
+          handleCloseGesture,
           isOpen,
           isDragging,
           shouldFade,
@@ -768,14 +746,15 @@ function Root({
 }
 
 type HandleProps = React.ComponentPropsWithoutRef<'div'> & {
-  preventCycle?: boolean;
+  handleClick?: () => void
+  preventCycle?: boolean
 };
 
 const LONG_HANDLE_PRESS_TIMEOUT = 250;
 const DOUBLE_TAP_TIMEOUT = 120;
 
 const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
-  { preventCycle = false, children, ...rest },
+  { preventCycle = false, handleClick, children, ...rest },
   ref,
 ) {
   const {
@@ -811,6 +790,12 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
       handleCancelInteraction();
       return;
     }
+    if (handleClick) {
+      handleCancelInteraction();
+      handleClick();
+      return;
+    }
+
     // Make sure to clear the timeout id if the user releases the handle before the cancel timeout
     handleCancelInteraction();
 
@@ -838,9 +823,14 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
     }, LONG_HANDLE_PRESS_TIMEOUT);
   }
 
+    // "should be called resetInteraction"
   function handleCancelInteraction() {
     window.clearTimeout(closeTimeoutIdRef.current);
     shouldCancelInteractionRef.current = false;
+  }
+
+  const foo = {
+    'vaul-handle': ''
   }
 
   return (
@@ -861,7 +851,7 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
       // onPointerUp is already handled by the content component
       ref={ref}
       vaul-drawer-visible={visible ? 'true' : 'false'}
-      vaul-handle=""
+      {...foo}
       aria-hidden="true"
       {...rest}
     >
@@ -920,6 +910,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
     onOpenChange,
     setVisible,
     handleOnly,
+    handleCloseGesture,
     direction,
   } = useDrawerContext();
   const composedRef = useComposedRefs(ref, drawerRef);
@@ -972,7 +963,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
       }}
       onPointerDownOutside={(e) => {
         onPointerDownOutside?.(e);
-        if (!modal || e.defaultPrevented) {
+        if (handleCloseGesture && handleCloseGesture() || !modal || e.defaultPrevented) {
           e.preventDefault();
           return;
         }
@@ -984,7 +975,6 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         if (!dismissible || openProp !== undefined) {
           return;
         }
-
         closeDrawer();
       }}
       onPointerMove={(event) => {
@@ -1014,8 +1004,18 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         onRelease(event);
       }}
         
-      onFocusOutside={(e) => { if (!modal) { e.preventDefault(); return } }}
-      onEscapeKeyDown={(e) => { if (!modal) { e.preventDefault(); return } }}
+      onFocusOutside={(e) => { 
+        if (handleCloseGesture && handleCloseGesture() || !modal) { 
+          e.preventDefault(); 
+          return 
+        } 
+      }}
+      onEscapeKeyDown={(e) => { 
+        if (handleCloseGesture && handleCloseGesture() || !modal) { 
+          e.preventDefault(); 
+          return 
+        } 
+      }}
     />
   );
 });
@@ -1051,6 +1051,7 @@ function NestedRoot({ onDrag, onOpenChange, ...rest }: DialogProps) {
   );
 }
 
+
 export const Drawer = {
   Root,
   NestedRoot,
@@ -1063,3 +1064,8 @@ export const Drawer = {
   Title: DialogPrimitive.Title,
   Description: DialogPrimitive.Description,
 };
+
+export { useDrawerContext }
+
+
+
