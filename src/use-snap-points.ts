@@ -179,24 +179,31 @@ export function useSnapPoints({
 
     const dim = isVertical(direction) ? window.innerHeight : window.innerWidth;
     if (velocity > VELOCITY_THRESHOLD && Math.abs(draggedDistance) < dim * 0.4) {
+      console.log("ON RELEASE: 182")
       const dragDirection = hasDraggedUp ? 1 : -1; // 1 = up, -1 = down
 
       // Don't do anything if we swipe upwards while being on the last snap point
       if (dragDirection > 0 && isLastSnapPoint) {
+      console.log("ON RELEASE: 187")
         snapToPoint(snapPointsOffset[snapPoints.length - 1]);
         return;
       }
 
       if (isFirst && dragDirection < 0 && dismissible) {
+      console.log("ON RELEASE: 193 (closing) ")
         closeDrawer();
+        return;
       }
 
+      console.log("ON RELEASE: 196, ", activeSnapPointIndex)
       if (activeSnapPointIndex === null) return;
 
+      console.log("ON RELEASE: 199, ", activeSnapPointIndex + dragDirection)
       snapToPoint(snapPointsOffset[activeSnapPointIndex + dragDirection]);
       return;
     }
 
+    console.log("ON RELEASE: 204, ", closestSnapPoint)
     snapToPoint(closestSnapPoint);
   }
 

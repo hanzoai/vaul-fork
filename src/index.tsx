@@ -408,12 +408,15 @@ function Root({
       setIsOpen(false);
     }, 300);
 
-    setTimeout(() => {
-      // reset(document.documentElement, 'scrollBehavior');
-      if (snapPoints) {
-        setActiveSnapPoint(snapPoints[0]);
-      }
-    }, TRANSITIONS.DURATION * 1000); // seconds to ms
+    if (snapPoints && activeSnapPoint !== snapPoints[0]) {
+      setTimeout(() => {
+        // reset(document.documentElement, 'scrollBehavior');
+        if (snapPoints) {
+          console.log("GOING TO [0]")
+          setActiveSnapPoint(snapPoints[0]);
+        }
+      }, TRANSITIONS.DURATION * 1000); // seconds to ms
+    }
   }
 
   React.useEffect(() => {
@@ -543,6 +546,7 @@ function Root({
     }
 
     if (velocity > VELOCITY_THRESHOLD) {
+      console.log("CLOSE: 549")
       closeDrawer();
       onReleaseProp?.(event, false);
       return;
@@ -551,6 +555,7 @@ function Root({
     const visibleDrawerHeight = Math.min(drawerRef.current.getBoundingClientRect().height ?? 0, window.innerHeight);
 
     if (swipeAmount >= visibleDrawerHeight * closeThreshold) {
+      console.log("CLOSE: 558")
       closeDrawer();
       onReleaseProp?.(event, false);
       return;
@@ -700,6 +705,7 @@ function Root({
         }
 
         if (!o) {
+          console.log("CLOSE: 708")
           closeDrawer();
         } else {
           setHasBeenOpened(true);
@@ -800,12 +806,14 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
     handleCancelInteraction();
 
     if ((!snapPoints || snapPoints.length === 0) && dismissible) {
+          console.log("CLOSE: 809")
       closeDrawer();
       return;
     }
 
     const isLastSnapPoint = activeSnapPoint === snapPoints[snapPoints.length - 1];
     if (isLastSnapPoint && dismissible) {
+          console.log("CLOSE: 816")
       closeDrawer();
       return;
     }
@@ -838,6 +846,7 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
       onClick={handleStartCycle}
       onDoubleClick={() => {
         shouldCancelInteractionRef.current = true;
+          console.log("CLOSE: 849")
         closeDrawer();
       }}
       onPointerCancel={handleCancelInteraction}
@@ -975,6 +984,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         if (!dismissible || openProp !== undefined) {
           return;
         }
+          console.log("CLOSE: 987")
         closeDrawer();
       }}
       onPointerMove={(event) => {
