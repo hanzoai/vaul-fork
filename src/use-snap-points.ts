@@ -86,6 +86,7 @@ export function useSnapPoints({
   );
 
   const snapToIndex = (index: number) => {
+    console.log("SNAP TO INDEX: ", index)
     if (activeSnapPointIndex !== index) {
       snapToPoint(snapPointsOffset[index] as number);
     }
@@ -93,6 +94,8 @@ export function useSnapPoints({
 
   const snapToPoint = React.useCallback(
     (dimension: number) => {
+      console.log("SNAP TO POINT: ", dimension)
+
       const newSnapPointIndex = snapPointsOffset?.findIndex((snapPointDim) => snapPointDim === dimension) ?? null;
       onSnapPointChange(newSnapPointIndex);
       set(drawerRef.current, {

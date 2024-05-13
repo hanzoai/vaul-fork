@@ -796,12 +796,13 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
       handleCancelInteraction();
       return;
     }
+    /*
     if (handleClick) {
       handleCancelInteraction();
       handleClick();
       return;
     }
-
+    */
     // Make sure to clear the timeout id if the user releases the handle before the cancel timeout
     handleCancelInteraction();
 
@@ -837,16 +838,12 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
     shouldCancelInteractionRef.current = false;
   }
 
-  const foo = {
-    'vaul-handle': ''
-  }
-
   return (
     <div
-      onClick={handleStartCycle}
+      onClick={handleClick ?? handleStartCycle}
       onDoubleClick={() => {
         shouldCancelInteractionRef.current = true;
-          console.log("CLOSE: 849")
+          console.log("CLOSE: 846")
         closeDrawer();
       }}
       onPointerCancel={handleCancelInteraction}
@@ -860,7 +857,7 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>(function (
       // onPointerUp is already handled by the content component
       ref={ref}
       vaul-drawer-visible={visible ? 'true' : 'false'}
-      {...foo}
+      vaul-handle=''
       aria-hidden="true"
       {...rest}
     >
@@ -984,7 +981,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         if (!dismissible || openProp !== undefined) {
           return;
         }
-          console.log("CLOSE: 987")
+          console.log("CLOSE: 984")
         closeDrawer();
       }}
       onPointerMove={(event) => {
@@ -1009,6 +1006,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         }
       }}
       onPointerUp={(event) => {
+        if (handleOnly) return; // :aa added
         rest.onPointerUp?.(event);
         pointerStartRef.current = null;
         onRelease(event);
