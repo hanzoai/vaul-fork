@@ -78,7 +78,6 @@ export function useSnapPoints({
         return width;
       }) ?? []
 
-  //console.log("snapPointsOffset MEMO: ", _snapPointsOffset);
       return _snapPointsOffset;
     },
     [snapPoints],
@@ -145,12 +144,9 @@ export function useSnapPoints({
 
   }): boolean /* was dragged */ {
 
-//console.log("USE SNAP REL START (144)")
     if (fadeFromIndex === undefined)  {
       return false;
     }
-
-//console.log("ACTIVE SP OFFSET: ", activeSnapPointOffset)
 
     const currentPosition =
       direction === 'bottom' || direction === 'right'
@@ -161,7 +157,6 @@ export function useSnapPoints({
     const hasDraggedUp = draggedDistance > 0;
 
     if (isOverlaySnapPoint) {
-//console.log("USE SNAP REL (158)")
       set(overlayRef.current, {
         transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
       });
@@ -189,40 +184,30 @@ export function useSnapPoints({
 
     if (velocity > VELOCITY_THRESHOLD && Math.abs(draggedDistance) < dim * 0.4) {
 
-//console.log("USE SNAP REL DRAGGED (184)")
-      
       const dragDirection = hasDraggedUp ? 1 : -1; // 1 = up, -1 = down
-      // Don't do anything if we swipe upwards while being on the last snap point
+        // Don't do anything if we swipe upwards while being on the last snap point
       if (dragDirection > 0 && isLastSnapPoint) {
-//console.log("USE SNAP REL DRAGGED TOP (190)")
         snapToPoint(snapPointsOffset[snapPoints.length - 1]);
       }
       else if (isFirst && dragDirection < 0 && dismissible) {
-//console.log("USE SNAP REL DRAGGED BOTTOm (196)")
         closeDrawer();
       }
       else if (activeSnapPointIndex !== null) {
-//console.log("USE SNAP REL DRAGGED go to NEXT POINT (202)")
         snapToPoint(snapPointsOffset[activeSnapPointIndex + dragDirection]);
       }
       return true;
     }
-  // https://borstch.com/blog/javascript-touch-events-and-mobile-specific-considerations 
+      // https://borstch.com/blog/javascript-touch-events-and-mobile-specific-considerations 
     if (Math.abs(draggedDistance) < 5 && elapsedTime < 200) {
-//console.log("NOT DRAGGED  (210)")
       return false;
     }
     if (Math.abs(draggedDistance) > 5) {
-//console.log("DRAGGED SLOWLY!  (214)")
-//console.log("SP offsets: ", snapPointsOffset)
-//console.log("currentPOS: ", currentPosition)
-//console.log("GOING TO CLOSEST SP: ", closestSnapPoint)
       snapToPoint(closestSnapPoint);
       return true;
     }
 
 
-    return true; // Pretend we were dragged so we don't allow onClick
+    return true; // :aa Pretend we were dragged so we don't allow onClick
   }
 
   function onDrag({ draggedDistance }: { draggedDistance: number }) {

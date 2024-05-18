@@ -20,6 +20,7 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
+    "tc": "tsc --noEmit",
     "build": "pnpm type-check && bunchee",
     "dev": "bunchee --watch",
     "dev:web": "turbo run dev --filter=website...",
