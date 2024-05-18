@@ -63,7 +63,6 @@ function Root({
   const [hasBeenOpened, setHasBeenOpened] = React.useState<boolean>(false);
   // Not visible = translateY(100%)
   const [visible, setVisible] = React.useState<boolean>(false);
-  // const [mounted, setMounted] = React.useState<boolean>(false);
   const [isDragging, setIsDragging] = React.useState<boolean>(false);
   const [justReleased, setJustReleased] = React.useState<boolean>(false);
   const overlayRef = React.useRef<HTMLDivElement>(null);
@@ -392,7 +391,7 @@ function Root({
     return () => window.visualViewport?.removeEventListener('resize', onVisualViewportChange);
   }, [activeSnapPointIndex, snapPoints, snapPointsOffset]);
 
-  const closeDrawer = React.useCallback(() => {
+  function closeDrawer() {
     cancelDrag();
     onClose?.();
     setIsOpen(false);
@@ -404,7 +403,7 @@ function Root({
         setActiveSnapPoint(snapPoints[0]);
       }
     }, TRANSITIONS.DURATION * 1000); // seconds to ms
-  }, []);
+  }
 
   function resetDrawer() {
     if (!drawerRef.current) return;
@@ -680,7 +679,6 @@ function Root({
           direction,
           log,
           shouldScaleBackground,
-          onClose: closeDrawer,
           setBackgroundColorOnScale,
           noBodyStyles,          
         }}
@@ -794,7 +792,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
     log,
     isOpen,
     snapPoints,
-    onClose,
+    closeDrawer,
   } = useDrawerContext();
 
   const composedRef = useComposedRefs(ref, drawerRef);
@@ -834,8 +832,8 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
   useScaleBackground();
 
   React.useEffect(() => {
-    if (!isOpen) onClose();
-  }, [onClose, isOpen]);
+    if (!isOpen) closeDrawer();
+  }, [closeDrawer, isOpen]);
 
   return (
     <DialogPrimitive.Content
@@ -876,13 +874,6 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         if (keyboardIsOpen.current) {
           keyboardIsOpen.current = false;
         }
-        // e.preventDefault();
-        // onOpenChange?.(false);
-        // if (!dismissible || openProp !== undefined) {
-        //   return;
-        // }
-
-        // closeDrawer();
       }}
       onFocusOutside={(e) => {
         if (handleCloseGesture && handleCloseGesture() || !modal) {

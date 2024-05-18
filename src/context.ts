@@ -31,7 +31,6 @@ interface DrawerContextValue {
   direction?: DrawerDirection;
   log: (s: string) => void;
   shouldScaleBackground: boolean;
-  onClose: () => void;
   setBackgroundColorOnScale: boolean;
   noBodyStyles: boolean;
 }
@@ -65,7 +64,6 @@ export const DrawerContext = React.createContext<DrawerContextValue>({
   direction: 'bottom',
   log: (s: string): void => {},
   shouldScaleBackground: false,
-  onClose: () => {},
   setBackgroundColorOnScale: true,
   noBodyStyles: false,
 });
