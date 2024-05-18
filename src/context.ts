@@ -12,7 +12,7 @@ interface DrawerContextValue {
   onNestedOpenChange: (o: boolean) => void;
   onNestedRelease: (event: React.PointerEvent<HTMLDivElement>, open: boolean) => void;
   dismissible: boolean;
-  handleOnly: boolean;
+  dragHandleOnly: boolean;
   isOpen: boolean;
   isDragging: boolean;
   keyboardIsOpen: React.MutableRefObject<boolean>;
@@ -24,6 +24,7 @@ interface DrawerContextValue {
   setActiveSnapPoint: (o: number | string | null) => void;
   visible: boolean;
   closeDrawer: () => void;
+  handleCloseGesture?: () => boolean;
   setVisible: (o: boolean) => void;
   openProp?: boolean;
   onOpenChange?: (o: boolean) => void;
@@ -42,7 +43,7 @@ export const DrawerContext = React.createContext<DrawerContextValue>({
   onNestedRelease: () => {},
   openProp: undefined,
   dismissible: false,
-  handleOnly: false,
+  dragHandleOnly: false,
   isOpen: false,
   isDragging: false,
   keyboardIsOpen: { current: false },

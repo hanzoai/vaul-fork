@@ -1,8 +1,16 @@
 'use client';
 
-import { Drawer } from 'vaul';
+import { Drawer } from '@hanzo/react-drawer';
+
+const SNAPS = ['200px', '500px']
 
 export function Hero() {
+
+  const handleClicked = () => {
+    console.log("HANDLE: handle clicked!")
+  }
+
+
   return (
     <div className="relative">
       <div
@@ -40,7 +48,7 @@ export function Hero() {
           <p className="text-gray-600 text-xl">Drawer component for React.</p>
         </div>
         <div className="flex gap-4 justify-center mt-6">
-          <Drawer.Root shouldScaleBackground>
+          <Drawer.Root shouldScaleBackground dragHandleOnly snapPoints={SNAPS}>
             <Drawer.Trigger asChild>
               <button
                 type="button"
@@ -52,8 +60,15 @@ export function Hero() {
             <Drawer.Portal>
               <Drawer.Overlay className="fixed inset-0 bg-black/40" />
               <Drawer.Content className="bg-gray-100 flex flex-col rounded-t-[10px] h-full mt-24 max-h-[96%] fixed bottom-0 left-0 right-0">
-                <div className="p-4 bg-white rounded-t-[10px] flex-1">
-                  <Drawer.Handle className="bg-gray-300 mb-8" />
+                <div className="p-4 bg-white border-gray-400 rounded-t-[10px] flex-1">
+                  <Drawer.Handle 
+                    className={
+                      'absolute left-0 right-0 mx-auto top-2 ' + 
+                      'w-[100px] h-3 rounded-full bg-gray-400 hover:bg-gray-200 ' + 
+                      'cursor-grab active:cursor-grabbing touch-pan-y'
+                    } 
+                    handleClick={handleClicked}
+                  />
                   <div className="max-w-md mx-auto">
                     <Drawer.Title className="font-medium mb-4">Drawer for React.</Drawer.Title>
                     <p className="text-gray-600 mb-2">

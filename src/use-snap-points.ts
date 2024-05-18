@@ -13,6 +13,7 @@ export function useSnapPoints({
   fadeFromIndex,
   onSnapPointChange,
   direction = 'bottom',
+  fastDragSkipsToEnd = true,
 }: {
   activeSnapPointProp?: number | string | null;
   setActiveSnapPointProp?(snapPoint: number | null | string): void;
@@ -22,6 +23,7 @@ export function useSnapPoints({
   overlayRef: React.RefObject<HTMLDivElement>;
   onSnapPointChange(activeSnapPointIndex: number): void;
   direction?: DrawerDirection;
+  fastDragSkipsToEnd?: boolean;
 }) {
   const [activeSnapPoint, setActiveSnapPoint] = useControllableState<string | number | null>({
     prop: activeSnapPointProp,
@@ -48,8 +50,8 @@ export function useSnapPoints({
   );
 
   const snapPointsOffset = React.useMemo(
-    () =>
-      snapPoints?.map((snapPoint) => {
+    () => {
+      const _snapPointsOffset = snapPoints?.map((snapPoint) => {
         const hasWindow = typeof window !== 'undefined';
         const isPx = typeof snapPoint === 'string';
         let snapPointAsNumber = 0;
@@ -74,7 +76,10 @@ export function useSnapPoints({
         }
 
         return width;
-      }) ?? [],
+      }) ?? []
+
+      return _snapPointsOffset;
+    },
     [snapPoints],
   );
 
@@ -125,17 +130,23 @@ export function useSnapPoints({
   }, [activeSnapPoint, activeSnapPointProp, snapPoints, snapPointsOffset, snapToPoint]);
 
   function onRelease({
-    draggedDistance,
-    closeDrawer,
+    draggedDistance, // :aa direction indicated with > or <  zero
+    elapsedTime,
     velocity,
+    closeDrawer,
     dismissible,
   }: {
     draggedDistance: number;
-    closeDrawer: () => void;
+    elapsedTime: number;
     velocity: number;
+    closeDrawer: () => void;
     dismissible: boolean;
-  }) {
-    if (fadeFromIndex === undefined) return;
+
+  }): boolean /* was dragged */ {
+
+    if (fadeFromIndex === undefined)  {
+      return false;
+    }
 
     const currentPosition =
       direction === 'bottom' || direction === 'right'
@@ -151,15 +162,15 @@ export function useSnapPoints({
       });
     }
 
-    if (velocity > 2 && !hasDraggedUp) {
+    if (fastDragSkipsToEnd && velocity > 2 && !hasDraggedUp) {
       if (dismissible) closeDrawer();
       else snapToPoint(snapPointsOffset[0]); // snap to initial point
-      return;
+      return true;
     }
 
-    if (velocity > 2 && hasDraggedUp && snapPointsOffset && snapPoints) {
+    if (fastDragSkipsToEnd && velocity > 2 && hasDraggedUp && snapPointsOffset && snapPoints) {
       snapToPoint(snapPointsOffset[snapPoints.length - 1] as number);
-      return;
+      return true;
     }
 
     // Find the closest snap point to the current position
@@ -170,26 +181,33 @@ export function useSnapPoints({
     });
 
     const dim = isVertical(direction) ? window.innerHeight : window.innerWidth;
-    if (velocity > VELOCITY_THRESHOLD && Math.abs(draggedDistance) < dim * 0.4) {
-      const dragDirection = hasDraggedUp ? 1 : -1; // 1 = up, -1 = down
 
-      // Don't do anything if we swipe upwards while being on the last snap point
+    if (velocity > VELOCITY_THRESHOLD && Math.abs(draggedDistance) < dim * 0.4) {
+
+      const dragDirection = hasDraggedUp ? 1 : -1; // 1 = up, -1 = down
+        // Don't do anything if we swipe upwards while being on the last snap point
       if (dragDirection > 0 && isLastSnapPoint) {
         snapToPoint(snapPointsOffset[snapPoints.length - 1]);
-        return;
       }
-
-      if (isFirst && dragDirection < 0 && dismissible) {
+      else if (isFirst && dragDirection < 0 && dismissible) {
         closeDrawer();
       }
-
-      if (activeSnapPointIndex === null) return;
-
-      snapToPoint(snapPointsOffset[activeSnapPointIndex + dragDirection]);
-      return;
+      else if (activeSnapPointIndex !== null) {
+        snapToPoint(snapPointsOffset[activeSnapPointIndex + dragDirection]);
+      }
+      return true;
+    }
+      // https://borstch.com/blog/javascript-touch-events-and-mobile-specific-considerations 
+    if (Math.abs(draggedDistance) < 5 && elapsedTime < 200) {
+      return false;
+    }
+    if (Math.abs(draggedDistance) > 5) {
+      snapToPoint(closestSnapPoint);
+      return true;
     }
 
-    snapToPoint(closestSnapPoint);
+
+    return true; // :aa Pretend we were dragged so we don't allow onClick
   }
 
   function onDrag({ draggedDistance }: { draggedDistance: number }) {
