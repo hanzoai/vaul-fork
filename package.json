@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/react-drawer",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Drawer component for React.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -65,6 +65,7 @@
     "react-dom": "^18.3.1"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.0.4"
+    "@radix-ui/react-dialog": "^1.0.4",
+    "usehooks-ts": "^3.1.0"
   }
 }

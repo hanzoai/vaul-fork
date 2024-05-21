@@ -1,5 +1,8 @@
-import React from 'react';
-import { set, isVertical } from './helpers';
+import React, { useLayoutEffect, useRef } from 'react';
+
+import { useDebounceCallback } from 'usehooks-ts'
+
+import { set, isVertical, isNegetiveDirection } from './helpers';
 import { TRANSITIONS, VELOCITY_THRESHOLD } from './constants';
 import { useControllableState } from './use-controllable-state';
 import { DrawerDirection } from './types';
@@ -25,11 +28,32 @@ export function useSnapPoints({
   direction?: DrawerDirection;
   fastDragSkipsToEnd?: boolean;
 }) {
+
+  const vertical = isVertical(direction)
+  const negDirection = isNegetiveDirection(direction)
+
   const [activeSnapPoint, setActiveSnapPoint] = useControllableState<string | number | null>({
     prop: activeSnapPointProp,
     defaultProp: snapPoints?.[0],
     onChange: setActiveSnapPointProp,
   });
+
+  const windowSizeRef = useRef<number>(0)  // size of window in relevant dimension
+
+  const setWindowSize = () => { 
+    windowSizeRef.current = vertical ? window.innerHeight : window.innerWidth 
+
+    console.log("SET W SIZE: ", windowSizeRef.current)
+  }
+  const setWindowSize_debounced = useDebounceCallback(setWindowSize, 500)
+
+  useLayoutEffect(() => {
+    setWindowSize()
+    window.addEventListener('resize', setWindowSize_debounced);
+    return () => {
+      window.removeEventListener('resize', setWindowSize_debounced)
+    }
+  }, [vertical])
 
   const isLastSnapPoint = React.useMemo(
     () => activeSnapPoint === snapPoints?.[snapPoints.length - 1] || null,
@@ -49,11 +73,23 @@ export function useSnapPoints({
     [snapPoints, activeSnapPoint],
   );
 
+
+
   const snapPointsOffset = React.useMemo(
     () => {
       const _snapPointsOffset = snapPoints?.map((snapPoint) => {
-        const hasWindow = typeof window !== 'undefined';
-        const isPx = typeof snapPoint === 'string';
+
+        const hasWindow = typeof window !== 'undefined'
+        const isPx = typeof snapPoint === 'string'
+
+        const scalarDrawerSize = isPx ? parseInt(snapPoint, 10) : (windowSizeRef.current * snapPoint) // fraction
+        console.log("SCALAR D SIZE: ", scalarDrawerSize)
+        return !hasWindow ? 
+          scalarDrawerSize 
+          : 
+          (negDirection ? windowSizeRef.current - scalarDrawerSize : scalarDrawerSize - windowSizeRef.current)
+
+        /*
         let snapPointAsNumber = 0;
 
         if (isPx) {
@@ -61,7 +97,7 @@ export function useSnapPoints({
         }
 
         if (isVertical(direction)) {
-          const height = isPx ? snapPointAsNumber : hasWindow ? snapPoint * window.innerHeight : 0;
+          const height = isPx ? parseInt(snapPoint, 10) : hasWindow ? snapPoint * window.innerHeight : 0;
 
           if (hasWindow) {
             return direction === 'bottom' ? window.innerHeight - height : -window.innerHeight + height;
@@ -69,18 +105,22 @@ export function useSnapPoints({
 
           return height;
         }
-        const width = isPx ? snapPointAsNumber : hasWindow ? snapPoint * window.innerWidth : 0;
+
+        const width = isPx ? parseInt(snapPoint, 10) : hasWindow ? snapPoint * window.innerWidth : 0;
 
         if (hasWindow) {
           return direction === 'right' ? window.innerWidth - width : -window.innerWidth + width;
         }
 
         return width;
+        */
       }) ?? []
+
+      console.log("POINTS OFFSET: ", _snapPointsOffset)
 
       return _snapPointsOffset;
     },
-    [snapPoints],
+    [snapPoints, windowSizeRef.current],
   );
 
   const activeSnapPointOffset = React.useMemo(

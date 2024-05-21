@@ -67,7 +67,23 @@ export const isVertical = (direction: DrawerDirection) => {
     default:
       return direction satisfies never;
   }
-};
+}
+
+export const isNegetiveDirection = (direction: DrawerDirection) => {
+  switch (direction) {
+    case 'right':
+    case 'bottom':
+      return true;
+    case 'top':
+    case 'left':
+      return false;
+    default:
+      return direction satisfies never;
+  }
+}
+
+
+
 
 export function getTranslate(element: HTMLElement, direction: DrawerDirection): number | null {
   if (!element) {

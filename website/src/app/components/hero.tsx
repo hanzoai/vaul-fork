@@ -67,7 +67,6 @@ export function Hero() {
                       'w-[100px] h-3 rounded-full bg-gray-400 hover:bg-gray-200 ' + 
                       'cursor-grab active:cursor-grabbing touch-pan-y'
                     } 
-                    handleClick={handleClicked}
                   />
                   <div className="max-w-md mx-auto">
                     <Drawer.Title className="font-medium mb-4">Drawer for React.</Drawer.Title>
