@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 
 import { useDebounceCallback } from 'usehooks-ts'
 
@@ -38,22 +38,40 @@ export function useSnapPoints({
     onChange: setActiveSnapPointProp,
   });
 
-  const windowSizeRef = useRef<number>(0)  // size of window in relevant dimension
+  const snapPointsAsOffsetsRef = useRef<number[]>([]) 
+  const [triggerRefresh, setTriggerRefresh] = useState<string>('anything') 
 
-  const setWindowSize = () => { 
-    windowSizeRef.current = vertical ? window.innerHeight : window.innerWidth 
+  const onResize = () => { 
+    const windowSize = vertical ? window.innerHeight : window.innerWidth 
 
-    console.log("SET W SIZE: ", windowSizeRef.current)
+    const _snapPointsOffset = snapPoints?.map((snapPoint) => {
+
+      const hasWindow = typeof window !== 'undefined'
+      const isPx = typeof snapPoint === 'string'
+
+      const scalarDrawerSize = isPx ? parseInt(snapPoint, 10) : (windowSize * snapPoint) // fraction
+      return !hasWindow ? 
+        scalarDrawerSize 
+        : 
+        (negDirection ? windowSize - scalarDrawerSize : scalarDrawerSize - windowSize)
+
+      }) ?? []
+
+//      console.log("SNAP POINT OFFSETS (ON RESIZE): ", _snapPointsOffset)
+
+      snapPointsAsOffsetsRef.current = _snapPointsOffset
+      setTriggerRefresh('any string ' + windowSize)
   }
-  const setWindowSize_debounced = useDebounceCallback(setWindowSize, 500)
+
+  const onResize_debounced = useDebounceCallback(onResize, 100)
 
   useLayoutEffect(() => {
-    setWindowSize()
-    window.addEventListener('resize', setWindowSize_debounced);
+    onResize()
+    window.addEventListener('resize', onResize_debounced);
     return () => {
-      window.removeEventListener('resize', setWindowSize_debounced)
+      window.removeEventListener('resize', onResize_debounced)
     }
-  }, [vertical])
+  }, [vertical, snapPoints])
 
   const isLastSnapPoint = React.useMemo(
     () => activeSnapPoint === snapPoints?.[snapPoints.length - 1] || null,
@@ -73,73 +91,26 @@ export function useSnapPoints({
     [snapPoints, activeSnapPoint],
   );
 
-
-
-  const snapPointsOffset = React.useMemo(
-    () => {
-      const _snapPointsOffset = snapPoints?.map((snapPoint) => {
-
-        const hasWindow = typeof window !== 'undefined'
-        const isPx = typeof snapPoint === 'string'
-
-        const scalarDrawerSize = isPx ? parseInt(snapPoint, 10) : (windowSizeRef.current * snapPoint) // fraction
-        console.log("SCALAR D SIZE: ", scalarDrawerSize)
-        return !hasWindow ? 
-          scalarDrawerSize 
-          : 
-          (negDirection ? windowSizeRef.current - scalarDrawerSize : scalarDrawerSize - windowSizeRef.current)
-
-        /*
-        let snapPointAsNumber = 0;
-
-        if (isPx) {
-          snapPointAsNumber = parseInt(snapPoint, 10);
-        }
-
-        if (isVertical(direction)) {
-          const height = isPx ? parseInt(snapPoint, 10) : hasWindow ? snapPoint * window.innerHeight : 0;
-
-          if (hasWindow) {
-            return direction === 'bottom' ? window.innerHeight - height : -window.innerHeight + height;
-          }
-
-          return height;
-        }
-
-        const width = isPx ? parseInt(snapPoint, 10) : hasWindow ? snapPoint * window.innerWidth : 0;
-
-        if (hasWindow) {
-          return direction === 'right' ? window.innerWidth - width : -window.innerWidth + width;
-        }
-
-        return width;
-        */
-      }) ?? []
-
-      console.log("POINTS OFFSET: ", _snapPointsOffset)
-
-      return _snapPointsOffset;
-    },
-    [snapPoints, windowSizeRef.current],
-  );
-
   const activeSnapPointOffset = React.useMemo(
-    () => (activeSnapPointIndex !== null ? snapPointsOffset?.[activeSnapPointIndex] : null),
-    [snapPointsOffset, activeSnapPointIndex],
+    () => (activeSnapPointIndex < snapPointsAsOffsetsRef.current.length ? 
+      snapPointsAsOffsetsRef.current[activeSnapPointIndex] 
+      : 
+      null
+    ),
+    [snapPointsAsOffsetsRef.current, activeSnapPointIndex],
   );
 
   const snapToPoint = React.useCallback(
     (dimension: number) => {
-      const newSnapPointIndex = snapPointsOffset?.findIndex((snapPointDim) => snapPointDim === dimension) ?? null;
+      const newSnapPointIndex = snapPointsAsOffsetsRef.current.findIndex((snapPointDim) => (snapPointDim === dimension));
       onSnapPointChange(newSnapPointIndex);
       set(drawerRef.current, {
         transition: `transform ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-        transform: isVertical(direction) ? `translate3d(0, ${dimension}px, 0)` : `translate3d(${dimension}px, 0, 0)`,
+        transform: vertical ? `translate3d(0, ${dimension}px, 0)` : `translate3d(${dimension}px, 0, 0)`,
       });
 
       if (
-        snapPointsOffset &&
-        newSnapPointIndex !== snapPointsOffset.length - 1 &&
+        newSnapPointIndex !== snapPointsAsOffsetsRef.current.length - 1 &&
         newSnapPointIndex !== fadeFromIndex
       ) {
         set(overlayRef.current, {
@@ -155,7 +126,7 @@ export function useSnapPoints({
 
       setActiveSnapPoint(newSnapPointIndex !== null ? snapPoints?.[newSnapPointIndex] : null);
     },
-    [drawerRef.current, snapPoints, snapPointsOffset, fadeFromIndex, overlayRef, setActiveSnapPoint],
+    [drawerRef.current, snapPoints, snapPointsAsOffsetsRef.current, fadeFromIndex, overlayRef, setActiveSnapPoint],
   );
 
   React.useEffect(() => {
@@ -163,11 +134,12 @@ export function useSnapPoints({
       const newIndex =
         snapPoints?.findIndex((snapPoint) => snapPoint === activeSnapPointProp || snapPoint === activeSnapPoint) ??
         -1;
-      if (snapPointsOffset && newIndex !== -1 && typeof snapPointsOffset[newIndex] === 'number') {
-        snapToPoint(snapPointsOffset[newIndex] as number);
+      if (newIndex !== -1 && newIndex < snapPointsAsOffsetsRef.current.length) {
+          // :aa do not animate, since this is likely happening as a result of a window resize on drag (debounced)
+        snapToPoint(snapPointsAsOffsetsRef.current[newIndex])
       }
     }
-  }, [activeSnapPoint, activeSnapPointProp, snapPoints, snapPointsOffset, snapToPoint]);
+  }, [activeSnapPoint, activeSnapPointProp, snapPoints, snapPointsAsOffsetsRef.current, snapToPoint]);
 
   function onRelease({
     draggedDistance, // :aa direction indicated with > or <  zero
@@ -204,36 +176,36 @@ export function useSnapPoints({
 
     if (fastDragSkipsToEnd && velocity > 2 && !hasDraggedUp) {
       if (dismissible) closeDrawer();
-      else snapToPoint(snapPointsOffset[0]); // snap to initial point
+      else snapToPoint(snapPointsAsOffsetsRef.current[0]); // snap to initial point
       return true;
     }
 
-    if (fastDragSkipsToEnd && velocity > 2 && hasDraggedUp && snapPointsOffset && snapPoints) {
-      snapToPoint(snapPointsOffset[snapPoints.length - 1] as number);
+    if (fastDragSkipsToEnd && velocity > 2 && hasDraggedUp && snapPoints) {
+      snapToPoint(snapPointsAsOffsetsRef.current[snapPointsAsOffsetsRef.current.length - 1]);
       return true;
     }
 
     // Find the closest snap point to the current position
-    const closestSnapPoint = snapPointsOffset?.reduce((prev, curr) => {
+    const closestSnapPoint = snapPointsAsOffsetsRef.current.reduce((prev, curr) => {
       if (typeof prev !== 'number' || typeof curr !== 'number') return prev;
 
       return Math.abs(curr - currentPosition) < Math.abs(prev - currentPosition) ? curr : prev;
     });
 
-    const dim = isVertical(direction) ? window.innerHeight : window.innerWidth;
+    const dim = vertical ? window.innerHeight : window.innerWidth;
 
     if (velocity > VELOCITY_THRESHOLD && Math.abs(draggedDistance) < dim * 0.4) {
 
       const dragDirection = hasDraggedUp ? 1 : -1; // 1 = up, -1 = down
         // Don't do anything if we swipe upwards while being on the last snap point
       if (dragDirection > 0 && isLastSnapPoint) {
-        snapToPoint(snapPointsOffset[snapPoints.length - 1]);
+        snapToPoint(snapPointsAsOffsetsRef.current[snapPoints.length - 1]);
       }
       else if (isFirst && dragDirection < 0 && dismissible) {
         closeDrawer();
       }
       else if (activeSnapPointIndex !== null) {
-        snapToPoint(snapPointsOffset[activeSnapPointIndex + dragDirection]);
+        snapToPoint(snapPointsAsOffsetsRef.current[activeSnapPointIndex + dragDirection]);
       }
       return true;
     }
@@ -258,20 +230,20 @@ export function useSnapPoints({
         : activeSnapPointOffset + draggedDistance;
 
     // Don't do anything if we exceed the last(biggest) snap point
-    if ((direction === 'bottom' || direction === 'right') && newValue < snapPointsOffset[snapPointsOffset.length - 1]) {
+    if ((direction === 'bottom' || direction === 'right') && newValue < snapPointsAsOffsetsRef.current[snapPointsAsOffsetsRef.current.length - 1]) {
       return;
     }
-    if ((direction === 'top' || direction === 'left') && newValue > snapPointsOffset[snapPointsOffset.length - 1]) {
+    if ((direction === 'top' || direction === 'left') && newValue > snapPointsAsOffsetsRef.current[snapPointsAsOffsetsRef.current.length - 1]) {
       return;
     }
 
     set(drawerRef.current, {
-      transform: isVertical(direction) ? `translate3d(0, ${newValue}px, 0)` : `translate3d(${newValue}px, 0, 0)`,
+      transform: vertical ? `translate3d(0, ${newValue}px, 0)` : `translate3d(${newValue}px, 0, 0)`,
     });
   }
 
   function getPercentageDragged(absDraggedDistance: number, isDraggingDown: boolean) {
-    if (!snapPoints || typeof activeSnapPointIndex !== 'number' || !snapPointsOffset || fadeFromIndex === undefined)
+    if (!snapPoints || typeof activeSnapPointIndex !== 'number' || !snapPointsAsOffsetsRef.current || fadeFromIndex === undefined)
       return null;
 
     // If this is true we are dragging to a snap point that is supposed to have an overlay
@@ -291,8 +263,8 @@ export function useSnapPoints({
 
     // Get the distance from overlaySnapPoint to the one before or vice-versa to calculate the opacity percentage accordingly
     const snapPointDistance = isOverlaySnapPoint
-      ? snapPointsOffset[targetSnapPointIndex] - snapPointsOffset[targetSnapPointIndex - 1]
-      : snapPointsOffset[targetSnapPointIndex + 1] - snapPointsOffset[targetSnapPointIndex];
+      ? snapPointsAsOffsetsRef.current[targetSnapPointIndex] - snapPointsAsOffsetsRef.current[targetSnapPointIndex - 1]
+      : snapPointsAsOffsetsRef.current[targetSnapPointIndex + 1] - snapPointsAsOffsetsRef.current[targetSnapPointIndex];
 
     const percentageDragged = absDraggedDistance / Math.abs(snapPointDistance);
 
@@ -312,6 +284,6 @@ export function useSnapPoints({
     activeSnapPointIndex,
     onRelease,
     onDrag,
-    snapPointsOffset,
+    snapPointsOffset: snapPointsAsOffsetsRef.current,
   };
 }

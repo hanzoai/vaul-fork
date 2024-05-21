@@ -2,13 +2,9 @@
 
 import { Drawer } from '@hanzo/react-drawer';
 
-const SNAPS = ['200px', '500px']
+const SNAPS = ['200px', 0.8]
 
 export function Hero() {
-
-  const handleClicked = () => {
-    console.log("HANDLE: handle clicked!")
-  }
 
 
   return (
