@@ -22,23 +22,30 @@ type DialogProps = {
   fixed?: boolean;
   dismissible?: boolean;
   dragHandleOnly?: boolean;
-  cycleSnapPointsOnHandleClick?: boolean;
-  handleHandleClicked?: () => void
-  fastDragSkipsToEnd?: boolean, 
   onDrag?: (event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) => void;
   onRelease?: (event: React.PointerEvent<HTMLDivElement>, open: boolean) => void;
   modal?: boolean;
   nested?: boolean;
+  onClose?: () => void;
+  direction?: 'top' | 'bottom' | 'left' | 'right';
+  preventScrollRestoration?: boolean;
+  disablePreventScroll?: boolean;
+
+    /** default processing of click 
+     * If not supplied, cycling of snappoints is trigger
+     * unless cycleSnapPointsOnHandleClick = false 
+    */
+  handleHandleClicked?: () => void;
+  cycleSnapPointsOnHandleClick?: boolean;
+  fastDragSkipsToEnd?: boolean;
     /** 
      * If supplied, will be called when any gesture / event would
      * normally close the drawer.  If the default close behavior is also desired, 
      * this function should return false.
     */
   handleCloseGesture?: () => boolean;
-  onClose?: () => void;
-  direction?: 'top' | 'bottom' | 'left' | 'right';
-  preventScrollRestoration?: boolean;
-  disablePreventScroll?: boolean;
+  debugOutput?: boolean;
+
 } & (WithFadeFromProps | WithoutFadeFromProps);
 
 export { type DialogProps as default }

@@ -5,7 +5,7 @@ import { useDebounceCallback } from 'usehooks-ts'
 import { set, isVertical, isNegetiveDirection } from './helpers';
 import { TRANSITIONS, VELOCITY_THRESHOLD } from './constants';
 import { useControllableState } from './use-controllable-state';
-import { DrawerDirection } from './types';
+import { DrawerDirection, SnapPoint } from './types';
 
 export function useSnapPoints({
   activeSnapPointProp,
@@ -17,6 +17,7 @@ export function useSnapPoints({
   onSnapPointChange,
   direction = 'bottom',
   fastDragSkipsToEnd = true,
+  log
 }: {
   activeSnapPointProp?: number | string | null;
   setActiveSnapPointProp?(snapPoint: number | null | string): void;
@@ -27,6 +28,7 @@ export function useSnapPoints({
   onSnapPointChange(activeSnapPointIndex: number): void;
   direction?: DrawerDirection;
   fastDragSkipsToEnd?: boolean;
+  log: (s: string) => void
 }) {
 
   const vertical = isVertical(direction)
@@ -42,8 +44,13 @@ export function useSnapPoints({
   const [triggerRefresh, setTriggerRefresh] = useState<string>('anything') 
 
   const onResize = () => { 
-    const windowSize = vertical ? window.innerHeight : window.innerWidth 
 
+
+    const windowSize = vertical ? window.innerHeight : window.innerWidth 
+log("REACT-DRAWER onResize() window size: " + windowSize)
+log("REACT-DRAWER onResize() snapPoints: " + snapPoints)
+
+      // snapoints may be null
     const _snapPointsOffset = snapPoints?.map((snapPoint) => {
 
       const hasWindow = typeof window !== 'undefined'
@@ -57,7 +64,7 @@ export function useSnapPoints({
 
       }) ?? []
 
-//      console.log("SNAP POINT OFFSETS (ON RESIZE): ", _snapPointsOffset)
+log("REACT-DRAWER onResize() snapPointOffsets: " + _snapPointsOffset)
 
       snapPointsAsOffsetsRef.current = _snapPointsOffset
       setTriggerRefresh('any string ' + windowSize)
@@ -194,27 +201,50 @@ export function useSnapPoints({
 
     const dim = vertical ? window.innerHeight : window.innerWidth;
 
+    const dragDirection = hasDraggedUp ? 1 : -1; // 1 = up, -1 = down
     if (velocity > VELOCITY_THRESHOLD && Math.abs(draggedDistance) < dim * 0.4) {
 
-      const dragDirection = hasDraggedUp ? 1 : -1; // 1 = up, -1 = down
+      log("REACT-DRAWER: dragged ....") // =======================
         // Don't do anything if we swipe upwards while being on the last snap point
       if (dragDirection > 0 && isLastSnapPoint) {
+        log("REACT-DRAWER: ... from top") // =======================
         snapToPoint(snapPointsAsOffsetsRef.current[snapPoints.length - 1]);
       }
       else if (isFirst && dragDirection < 0 && dismissible) {
+        log("REACT-DRAWER: ...closed from lowest") // =======================
         closeDrawer();
       }
       else if (activeSnapPointIndex !== null) {
+        log("REACT-DRAWER: ...to next point.") // =======================
         snapToPoint(snapPointsAsOffsetsRef.current[activeSnapPointIndex + dragDirection]);
       }
       return true;
     }
       // https://borstch.com/blog/javascript-touch-events-and-mobile-specific-considerations 
     if (Math.abs(draggedDistance) < 5 && elapsedTime < 200) {
+      log("REACT-DRAWER: not dragged ....") // =======================
       return false;
     }
     if (Math.abs(draggedDistance) > 5) {
-      snapToPoint(closestSnapPoint);
+      log("REACT-DRAWER: dragged slowly to close or closest: " + closestSnapPoint) // =======================
+
+      const firstSnapPointDistance = (): number => {
+        let result: number
+        if (typeof snapPoints[0] === 'string') {
+          result = parseInt(snapPoints[0], 10) // eg, '200px'
+        }
+        else if (typeof snapPoints[0] === 'number') { 
+          result = (snapPoints[0] as number) * dim // eg, 0.3
+        }
+        return result
+      }
+
+      if (isFirst && !hasDraggedUp && dismissible && (Math.abs(draggedDistance) > firstSnapPointDistance() / 2)) {
+        closeDrawer();
+      }
+      else {
+        snapToPoint(closestSnapPoint);
+      }
       return true;
     }
 

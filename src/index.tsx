@@ -48,6 +48,7 @@ function Root({
   direction = 'bottom',
   preventScrollRestoration = true,
   disablePreventScroll = false,
+  debugOutput = false,
 }: DialogProps) {
   
   const [isOpen = false, setIsOpen] = React.useState<boolean>(false);
@@ -76,6 +77,13 @@ function Root({
     if (snapPoints && activeSnapPointIndex === snapPointsOffset.length - 1) openTime.current = new Date();
   }, []);
 
+  const log = (s: string) => {
+    if (debugOutput) {
+      console.log(s)
+    }  
+  }
+
+
   const {
     activeSnapPoint,
     activeSnapPointIndex,
@@ -94,7 +102,8 @@ function Root({
     overlayRef,
     onSnapPointChange,
     direction,
-    fastDragSkipsToEnd, 
+    fastDragSkipsToEnd,
+    log 
   });
 
   usePreventScroll({
@@ -491,7 +500,6 @@ function Root({
     dragEndTime.current = new Date();
   }
 
-
   function cycleSnapPoints() {
 
     if ((!snapPoints || snapPoints.length === 0) && dismissible) {
@@ -510,7 +518,6 @@ function Root({
     const nextSnapPoint = snapPoints[currentSnapIndex + 1];
     setActiveSnapPoint(nextSnapPoint);
   }
-
 
 
   function onRelease(event: React.PointerEvent<HTMLDivElement>) {
@@ -776,6 +783,7 @@ function Root({
           modal,
           snapPointsOffset,
           direction,
+          log
         }}
       >
         {children}
@@ -884,6 +892,7 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
     dragHandleOnly,
     handleCloseGesture,
     direction,
+    log
   } = useDrawerContext();
 
   const composedRef = useComposedRefs(ref, drawerRef);
