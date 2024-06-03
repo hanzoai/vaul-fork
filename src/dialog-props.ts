@@ -22,6 +22,7 @@ type DialogProps = {
   fixed?: boolean;
   dismissible?: boolean;
   dragHandleOnly?: boolean;
+  extendHandleDragRegion?: boolean;
   onDrag?: (event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) => void;
   onRelease?: (event: React.PointerEvent<HTMLDivElement>, open: boolean) => void;
   modal?: boolean;

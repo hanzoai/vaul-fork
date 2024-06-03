@@ -34,6 +34,7 @@ function Root({
   scrollLockTimeout = SCROLL_LOCK_TIMEOUT,
   dismissible = true,
   dragHandleOnly = false,
+  extendHandleDragRegion=true,
   cycleSnapPointsOnHandleClick = true,
   handleHandleClicked,
   fastDragSkipsToEnd=true, 
@@ -770,6 +771,7 @@ function Root({
           onDrag,
           dismissible,
           dragHandleOnly,
+          extendHandleDragRegion,
           handleCloseGesture,
           isOpen,
           isDragging,
@@ -805,6 +807,7 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>((
   const {
     visible,
     dragHandleOnly,
+    extendHandleDragRegion,
     onPress,
     onDrag,
   } = useDrawerContext();
@@ -827,10 +830,13 @@ const Handle = React.forwardRef<HTMLDivElement, HandleProps>((
       aria-hidden="true"
       {...rest}
     >
-      {/* Expand handle's hit area beyond what's visible to ensure a 44x44 tap target for touch devices */}
-      <span vaul-handle-hitarea="" aria-hidden="true">
-        {children}
-      </span>
+      {extendHandleDragRegion ? /* Expand handle's hit area beyond what's visible to ensure a 44x44 tap target for touch devices */ (
+        <span vaul-handle-hitarea="" aria-hidden="true">
+          {children}
+        </span>
+      ) : (
+        children
+      )}
     </div>
   );
 });
