@@ -3,15 +3,17 @@ import React from 'react';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { DrawerContext, useDrawerContext } from './context';
-//import './style.css'; // :aa 
+import './style.css'; // :aa 
 import { usePreventScroll, isInput, isIOS } from './use-prevent-scroll';
 import { useComposedRefs } from './use-composed-refs';
 import { usePositionFixed } from './use-position-fixed';
 import { useSnapPoints } from './use-snap-points';
-import { set, reset, getTranslate, dampenValue, isVertical } from './helpers';
+import { set, getTranslate, dampenValue, isVertical } from './helpers';
 import { TRANSITIONS, VELOCITY_THRESHOLD } from './constants';
 import { DrawerDirection } from './types';
 import type DialogProps from './dialog-props'; // :aa
+import { useControllableState } from './use-controllable-state';
+import { useScaleBackground } from './use-scale-background';
 
 const CLOSE_THRESHOLD = 0.25;
 const SCROLL_LOCK_TIMEOUT = 100;
@@ -21,10 +23,11 @@ const WINDOW_TOP_OFFSET = 26;
 const DRAG_CLASS = 'vaul-dragging';
 
 function Root({
+  defaultOpen,
   open: openProp,
   onOpenChange,
   children,
-  shouldScaleBackground,
+  shouldScaleBackground = false,
   onDrag: onDragProp,
   onRelease: onReleaseProp,
   snapPoints,
@@ -51,12 +54,15 @@ function Root({
   disablePreventScroll = false,
   debugOutput = false,
 }: DialogProps) {
-  
-  const [isOpen = false, setIsOpen] = React.useState<boolean>(false);
+
+  const [isOpen = false, setIsOpen] = useControllableState({
+    defaultProp: defaultOpen,
+    prop: openProp,
+    onChange: onOpenChange,
+  });
   const [hasBeenOpened, setHasBeenOpened] = React.useState<boolean>(false);
   // Not visible = translateY(100%)
   const [visible, setVisible] = React.useState<boolean>(false);
-  const [mounted, setMounted] = React.useState<boolean>(false);
   const [isDragging, setIsDragging] = React.useState<boolean>(false);
   const [justReleased, setJustReleased] = React.useState<boolean>(false);
   const overlayRef = React.useRef<HTMLDivElement>(null);
@@ -83,7 +89,6 @@ function Root({
       console.log(s)
     }  
   }
-
 
   const {
     activeSnapPoint,
@@ -325,7 +330,6 @@ function Root({
 
   React.useEffect(() => {
     return () => {
-      scaleBackground(false);
       restorePositionSetting();
     };
   }, []);
@@ -388,29 +392,10 @@ function Root({
   }, [activeSnapPointIndex, snapPoints, snapPointsOffset]);
 
   function closeDrawer() {
-    if (!drawerRef.current) return;
-
     cancelDrag();
-
     onClose?.();
-    set(drawerRef.current, {
-      transform: isVertical(direction)
-        ? `translate3d(0, ${direction === 'bottom' ? '100%' : '-100%'}, 0)`
-        : `translate3d(${direction === 'right' ? '100%' : '-100%'}, 0, 0)`,
-      transition: `transform ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-    });
-
-    set(overlayRef.current, {
-      opacity: '0',
-      transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-    });
-
-    scaleBackground(false);
-
-    setTimeout(() => {
-      setVisible(false);
-      setIsOpen(false);
-    }, 300);
+    setIsOpen(false);
+    setVisible(false);
 
     setTimeout(() => {
       // reset(document.documentElement, 'scrollBehavior');
@@ -419,38 +404,6 @@ function Root({
       }
     }, TRANSITIONS.DURATION * 1000); // seconds to ms
   }
-
-  React.useEffect(() => {
-    if (!isOpen && shouldScaleBackground) {
-      // Can't use `onAnimationEnd` as the component will be invisible by then
-      const id = setTimeout(() => {
-        reset(document.body);
-      }, 200);
-
-      return () => clearTimeout(id);
-    }
-  }, [isOpen, shouldScaleBackground]);
-
-  // LayoutEffect to prevent extra render where openProp and isOpen are not synced yet
-  React.useLayoutEffect(() => {
-    if (openProp) {
-      setIsOpen(true);
-      setHasBeenOpened(true);
-    } else {
-      closeDrawer();
-    }
-  }, [openProp]);
-
-  // This can be done much better
-  React.useEffect(() => {
-    if (mounted) {
-      onOpenChange?.(isOpen);
-    }
-  }, [isOpen]);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   function resetDrawer() {
     if (!drawerRef.current) return;
@@ -500,6 +453,7 @@ function Root({
     setIsDragging(false);
     dragEndTime.current = new Date();
   }
+
 
   function cycleSnapPoints() {
 
@@ -611,7 +565,6 @@ function Root({
       });
 
       openTime.current = new Date();
-      scaleBackground(true);
     }
   }, [isOpen]);
 
@@ -627,58 +580,6 @@ function Root({
       });
     }
   }, [visible]);
-
-  function scaleBackground(open: boolean) {
-    const wrapper = document.querySelector('[vaul-drawer-wrapper]');
-
-    if (!wrapper || !shouldScaleBackground) return;
-
-    if (open) {
-      if (setBackgroundColorOnScale) {
-        if (!noBodyStyles) {
-          // setting original styles initially
-          set(document.body, {
-            background: document.body.style.backgroundColor || document.body.style.background,
-          });
-          // setting body styles, with cache ignored, so that we can get correct original styles in reset
-          set(
-            document.body,
-            {
-              background: 'black',
-            },
-            true,
-          );
-        }
-      }
-
-      set(wrapper, {
-        borderRadius: `${BORDER_RADIUS}px`,
-        overflow: 'hidden',
-        ...(isVertical(direction)
-          ? {
-              transform: `scale(${getScale()}) translate3d(0, calc(env(safe-area-inset-top) + 14px), 0)`,
-              transformOrigin: 'top',
-            }
-          : {
-              transform: `scale(${getScale()}) translate3d(calc(env(safe-area-inset-top) + 14px), 0, 0)`,
-              transformOrigin: 'left',
-            }),
-        transitionProperty: 'transform, border-radius',
-        transitionDuration: `${TRANSITIONS.DURATION}s`,
-        transitionTimingFunction: `cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-      });
-    } else {
-      // Exit
-      reset(wrapper, 'overflow');
-      reset(wrapper, 'transform');
-      reset(wrapper, 'borderRadius');
-      set(wrapper, {
-        transitionProperty: 'transform, border-radius',
-        transitionDuration: `${TRANSITIONS.DURATION}s`,
-        transitionTimingFunction: `cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-      });
-    }
-  }
 
   function onNestedOpenChange(o: boolean) {
     const scale = o ? (window.innerWidth - NESTED_DISPLACEMENT) / window.innerWidth : 1;
@@ -706,7 +607,7 @@ function Root({
     }
   }
 
-  function onNestedDrag(event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) {
+  function onNestedDrag(_event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) {
     if (percentageDragged < 0) return;
 
     const initialDim = isVertical(direction) ? window.innerHeight : window.innerWidth;
@@ -722,7 +623,7 @@ function Root({
     });
   }
 
-  function onNestedRelease(event: React.PointerEvent<HTMLDivElement>, o: boolean) {
+  function onNestedRelease(_event: React.PointerEvent<HTMLDivElement>, o: boolean) {
     const dim = isVertical(direction) ? window.innerHeight : window.innerWidth;
     const scale = o ? (dim - NESTED_DISPLACEMENT) / dim : 1;
     const translate = o ? -NESTED_DISPLACEMENT : 0;
@@ -740,18 +641,10 @@ function Root({
   return (
     <DialogPrimitive.Root
       modal={modal}
-      onOpenChange={(o: boolean) => {
-        if (openProp !== undefined) {
-          onOpenChange?.(o);
-          return;
-        }
-
-        if (!o) {
-          closeDrawer();
-        } else {
-          setHasBeenOpened(true);
-          setIsOpen(o);
-        }
+      defaultOpen={defaultOpen}
+      onOpenChange={(open) => {
+        if (open) setHasBeenOpened(true);
+        setIsOpen(open);
       }}
       open={isOpen}
     >
@@ -763,7 +656,6 @@ function Root({
           setActiveSnapPoint,
           drawerRef,
           overlayRef,
-          scaleBackground,
           onOpenChange,
           onPress,
           setVisible,
@@ -785,7 +677,10 @@ function Root({
           modal,
           snapPointsOffset,
           direction,
-          log
+          log,
+          shouldScaleBackground,
+          setBackgroundColorOnScale,
+          noBodyStyles,          
         }}
       >
         {children}
@@ -886,19 +781,18 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
     onPress,
     onRelease,
     onDrag,
-    dismissible,
     keyboardIsOpen,
     snapPointsOffset,
     visible,
-    closeDrawer,
     modal,
-    openProp,
-    onOpenChange,
     setVisible,
     dragHandleOnly,
     handleCloseGesture,
     direction,
-    log
+    log,
+    isOpen,
+    snapPoints,
+    closeDrawer,
   } = useDrawerContext();
 
   const composedRef = useComposedRefs(ref, drawerRef);
@@ -928,17 +822,25 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
     wasBeyondThePointRef.current = true;
     return true;
   };
+  const hasSnapPoints = snapPoints && snapPoints.length > 0;
 
   React.useEffect(() => {
     // Trigger enter animation without using CSS animation
     setVisible(true);
   }, []);
 
+  useScaleBackground();
+
+  React.useEffect(() => {
+    if (!isOpen) closeDrawer();
+  }, [closeDrawer, isOpen]);
+
   return (
     <DialogPrimitive.Content
       vaul-drawer=""
       vaul-drawer-direction={direction}
       vaul-drawer-visible={visible ? 'true' : 'false'}
+      vaul-snap-points={isOpen && hasSnapPoints ? 'true' : 'false'}
       {...rest}
       ref={composedRef}
       style={
@@ -972,13 +874,6 @@ const Content = React.forwardRef<HTMLDivElement, ContentProps>(function (
         if (keyboardIsOpen.current) {
           keyboardIsOpen.current = false;
         }
-        e.preventDefault();
-        onOpenChange?.(false);
-        if (!dismissible || openProp !== undefined) {
-          return;
-        }
-
-        closeDrawer();
       }}
       onFocusOutside={(e) => {
         if (handleCloseGesture && handleCloseGesture() || !modal) {
